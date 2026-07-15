@@ -1,88 +1,102 @@
 # 🏥 AI Clinic Chatbot
 
-An AI-powered virtual receptionist for medical clinics. The chatbot helps patients by answering frequently asked questions, collecting booking information, and routing requests intelligently. It is built with **Gradio** for the user interface, **OpenAI** for natural language understanding, and **n8n** for workflow automation.
+An AI-powered virtual receptionist for medical clinics that answers patient questions, manages appointment bookings, and routes requests using an AI Router. The application is built with **Gradio**, **OpenAI**, **n8n**, and **Google Sheets**.
 
 ---
 
 ## ✨ Features
 
-- **Smart Intent Routing**
-  - Automatically classifies patient messages into:
-    - Greeting
-    - FAQ
-    - Appointment Booking
-    - Medical Questions
+- 🤖 **AI Router (Design Pattern)**
+  - Uses an AI Router Agent to classify each patient message and forward it to the appropriate agent:
+    - Greeting Agent
+    - FAQ Agent
+    - Booking Agent
+    - Medical Safety Agent
 
-- **FAQ Management**
-  - Extracts keywords from the patient's message (e.g., *price*, *working hours*, *insurance*, *location*).
-  - Sends the request to an **n8n Webhook**.
-  - Searches a Google Sheets knowledge base and returns the most relevant answer.
+- 📚 **FAQ Agent**
+  - Extracts keywords from the patient's message.
+  - Retrieves the most relevant answer from a Google Sheets knowledge base through **n8n**.
 
-- **Appointment Booking**
-  - Collects the required booking information:
+- 📅 **Booking Agent**
+  - Collects:
     - Full Name
     - Phone Number
     - Medical Specialty
     - Preferred Date & Time
-  - Sends the booking data to **n8n**.
-  - The workflow formats the date, stores the appointment in Google Sheets, and returns a confirmation.
+  - Sends the booking request to **n8n**, which formats the date and stores the appointment in Google Sheets.
 
-- **Medical Safety**
-  - Detects medical consultation requests.
-  - Politely refuses to provide medical diagnoses or treatment recommendations and advises the patient to consult a doctor.
+- 🩺 **Medical Safety**
+  - Detects requests for medical diagnosis or treatment.
+  - Politely declines and advises the patient to consult a healthcare professional.
 
 ---
 
-# ⚙️ Tech Stack
+## 🧠 Architecture
+
+The chatbot follows an **AI Router Design Pattern**.
+
+Instead of handling every request with a single prompt, an AI Router first determines the user's intent, then forwards the conversation to the most suitable specialized agent.
+
+```text
+                User Message
+                     │
+                     ▼
+             AI Router Agent
+                     │
+     ┌───────────────┼───────────────┐
+     ▼               ▼               ▼               ▼
+ Greeting        FAQ Agent      Booking Agent   Medical Safety
+```
+
+This modular architecture makes the system easier to maintain, extend, and scale.
+
+---
+
+## ⚙️ Tech Stack
 
 - Python
 - Gradio
 - OpenAI API
 - n8n
 - Google Sheets
-- Python-dotenv
+- python-dotenv
 
 ---
 
-# 🔄 n8n Workflow
+## 🔄 n8n Workflow
 
 The chatbot communicates with **n8n** through a webhook.
 
 The workflow is responsible for:
 
-- Routing requests (FAQ or Booking)
 - Searching FAQs in Google Sheets
-- Filtering and aggregating relevant answers
 - Checking doctor availability
 - Formatting appointment dates
-- Saving appointments into Google Sheets
-- Returning the final response to the chatbot
-
-## Workflow Overview
+- Saving bookings
+- Returning the final response
 
 > Add your workflow image here.
 
 ```md
-![n8n Workflow](images/workflow.png)
+![Workflow](images/workflow.png)
 ```
 
 ---
 
-# 📂 Project Structure
+## 📂 Project Structure
 
-```
+```text
 .
 ├── app.py
+├── prompts/
 ├── requirements.txt
 ├── .env
-├── prompts/
-│   
 └── README.md
 ```
 
 ---
 
-# 🚀 Installation
+## 🚀 Installation
 
 Clone the repository
 
@@ -91,13 +105,13 @@ git clone <repository-url>
 cd clinic-chatbot
 ```
 
-Install the dependencies
+Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Create a `.env` file and add:
+Create a `.env` file
 
 ```env
 OPENAI_API_KEY=
@@ -109,26 +123,25 @@ N8N_WEBHOOK=
 Run the application
 
 ```bash
-python main.py
+python app.py
 ```
 
-Gradio will generate a local URL where you can start chatting with the assistant.
+Gradio will generate a local URL to start chatting with the assistant.
 
 ---
 
-# 📋 Requirements
+## 📋 Requirements
 
 - Python 3.10+
 - Gradio
 - OpenAI
-- python-dotenv
 - n8n
 - Google Sheets
 
 ---
 
-# 📌 Notes
+## 📌 Notes
 
-- FAQ data is stored in Google Sheets.
-- Bookings are automatically recorded through n8n  in Google Sheets.
-- Medical questions requiring diagnosis are intentionally declined for patient safety.
+- FAQ data is managed in Google Sheets.
+- Appointment bookings are processed automatically through n8n.
+- Medical diagnosis and treatment recommendations are intentionally not provided for patient safety.
