@@ -43,7 +43,7 @@ Instead of handling every request with a single prompt, an AI Router first deter
                      ▼
              AI Router Agent
                      │
-     ┌───────────────┼───────────────┐
+     ┌───────────────┼───────────────┐───────────────┐
      ▼               ▼               ▼               ▼
  Greeting        FAQ Agent      Booking Agent   Medical Safety
 ```
@@ -75,11 +75,6 @@ The workflow is responsible for:
 - Saving bookings
 - Returning the final response
 
-> Add your workflow image here.
-
-```md
-![Workflow](images/workflow.png)
-```
 
 ---
 
@@ -87,10 +82,12 @@ The workflow is responsible for:
 
 ```text
 .
-├── app.py
-├── prompts/
-├── requirements.txt
+├── main.py
+├── prompts.py
+├── agents.py
+├── config.py
 ├── .env
+├── requirements.txt
 └── README.md
 ```
 
@@ -101,7 +98,7 @@ The workflow is responsible for:
 Clone the repository
 
 ```bash
-git clone <repository-url>
+git clone [<repository-url>](https://github.com/Mostafa-Ayman1/clinic-chatbot.git)
 cd clinic-chatbot
 ```
 
@@ -123,7 +120,7 @@ N8N_WEBHOOK=
 Run the application
 
 ```bash
-python app.py
+python main.py
 ```
 
 Gradio will generate a local URL to start chatting with the assistant.
