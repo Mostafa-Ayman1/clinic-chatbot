@@ -1,0 +1,643 @@
+{
+  "name": "Router Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinical",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -432,
+        -528
+      ],
+      "id": "81560027-659e-4f7a-a04b-cc3ef46711c9",
+      "name": "Webhook",
+      "webhookId": "d45f684b-e3fb-4b23-9381-557588443e83"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ \n  JSON.stringify({\n    \"Answers\": $json['الإجابة'].join(\"\\n\"),\n    \"Data\": JSON.stringify($json.data) \n  })\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        912,
+        -336
+      ],
+      "id": "dae85af7-04d2-4051-8d95-8f88e5152eaf",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "الإجابة"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        464,
+        -528
+      ],
+      "id": "8711104a-4639-4c29-b8f7-6e5242c7db94",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        464,
+        -336
+      ],
+      "id": "1c3d350a-e02a-463e-8653-43a086903fb2",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "submit_booking",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cf670562-6691-4a06-b26a-6d5273fc6551"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "booking"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "47d79063-50ba-4a82-b2b4-aeb41139e03d",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "search_faq",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "faq"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -208,
+        -528
+      ],
+      "id": "e1ba5ed8-7d5b-4bf8-bfa3-610702bf2670",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const preferredTime = $input.first().json.body.preferred_time;\n\n// أسماء الأيام\nconst daysMap = {\n  \"الأحد\": 0,\n  \"الاثنين\": 1,\n  \"الإثنين\": 1,\n  \"الثلاثاء\": 2,\n  \"الأربعاء\": 3,\n  \"الخميس\": 4,\n  \"الجمعة\": 5,\n  \"السبت\": 6,\n};\n\n// استخراج اليوم والوقت + الفترة (ص/م) لو موجودة\nconst match = preferredTime.match(\n  /(الأحد|الاثنين|الإثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت).*?(\\d{1,2}):(\\d{2})\\s*(ص|م|صباحاً|صباحا|مساءً|مساءا|مساء)?/\n);\n\nif (!match) {\n  throw new Error(\"Invalid preferred_time format: \" + preferredTime);\n}\n\nconst [, dayName, hourStr, minuteStr, periodRaw] = match;\n\nconst targetDay = daysMap[dayName];\n\n// تحويل الساعة لصيغة 24 ساعة بناءً على ص/م\nlet hour = parseInt(hourStr, 10);\nconst minute = parseInt(minuteStr, 10);\nconst period = periodRaw ? periodRaw.trim() : null;\n\nconst isPM = period && (period.startsWith(\"م\"));\nconst isAM = period && (period.startsWith(\"ص\"));\n\nif (isPM && hour < 12) {\n  hour += 12;\n} else if (isAM && hour === 12) {\n  // \"12:00 ص\" يعني منتصف الليل = 00:00\n  hour = 0;\n}\n// لو مفيش period محدد، بنسيب الساعة زي ما هي (مفروض تكون بالفعل 24 ساعة)\n\nif (hour > 23 || hour < 0) {\n  throw new Error(\"Invalid hour after conversion: \" + hour);\n}\n\n// تاريخ اليوم\nconst now = new Date();\nconst resultDate = new Date(now);\n\n// حساب أقرب يوم قادم\nlet diff = (targetDay - now.getDay() + 7) % 7;\nif (diff === 0) diff = 7; // لو نفس اليوم، اختار الأسبوع القادم\n\nresultDate.setDate(now.getDate() + diff);\n\n// تنسيق الساعة والدقيقة\nconst h = String(hour).padStart(2, \"0\");\nconst m = String(minute).padStart(2, \"0\");\n\nreturn [\n  {\n    json: {\n      patient_name: $input.first().json.body.patient_name,\n      phone_number: $input.first().json.body.phone_number,\n      specialty: $input.first().json.body.specialty,\n      date: resultDate.toISOString().split(\"T\")[0],\n      time: `${h}:${m}`,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -720
+      ],
+      "id": "6755733b-e87e-44f3-b479-81d80fd3a5c2",
+      "name": "Edit Date"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\" : \"done\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        464,
+        -720
+      ],
+      "id": "d85a1a55-25e0-4b52-a5d8-41c49ba06293",
+      "name": "Done"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cb32f408-a321-412c-87d8-f934a800fc31",
+              "leftValue": "={{ $json.body.keywords }}",
+              "rightValue": "دكتور",
+              "operator": {
+                "type": "array",
+                "operation": "contains",
+                "rightType": "any"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        16,
+        -240
+      ],
+      "id": "4370d1e7-0dd1-435f-817a-c447df1c51a4",
+      "name": "Doctor ?"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        688,
+        -336
+      ],
+      "id": "c8b9b0f7-b396-4889-a6e8-30c4c05d601e",
+      "name": "Merge",
+      "alwaysOutputData": false,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10j5yJzPCvuFMFcFZnTQvewfbG1OkhLICaCpAbDU3vq4",
+          "mode": "list",
+          "cachedResultName": "Clinical",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10j5yJzPCvuFMFcFZnTQvewfbG1OkhLICaCpAbDU3vq4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "FAQ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10j5yJzPCvuFMFcFZnTQvewfbG1OkhLICaCpAbDU3vq4/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        16,
+        -528
+      ],
+      "id": "db91f2bf-5b88-4ece-a3f9-14fdca503c97",
+      "name": "FAQ Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lHvkwg4glYePcvfd",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "16a4310d-7972-4f85-aa0b-32f0c42e51de",
+              "leftValue": "={{ $json['الكلمات المفتاحية'].split(\"،\").map(k => k.trim()).some(keyword => $('Webhook').item.json.body.keywords.includes(keyword)) }}",
+              "rightValue": "={{ $('Webhook').item.json.body.keywords }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        240,
+        -528
+      ],
+      "id": "64538528-5c2d-49d4-bf54-fda8d8a51277",
+      "name": "Only Related"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "10j5yJzPCvuFMFcFZnTQvewfbG1OkhLICaCpAbDU3vq4",
+          "mode": "list",
+          "cachedResultName": "Clinical",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10j5yJzPCvuFMFcFZnTQvewfbG1OkhLICaCpAbDU3vq4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1192228673,
+          "mode": "list",
+          "cachedResultName": "Doctors",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10j5yJzPCvuFMFcFZnTQvewfbG1OkhLICaCpAbDU3vq4/edit#gid=1192228673"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        240,
+        -336
+      ],
+      "id": "f25f281a-e51e-4077-88f1-d572f8936080",
+      "name": "Doctors Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lHvkwg4glYePcvfd",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "10j5yJzPCvuFMFcFZnTQvewfbG1OkhLICaCpAbDU3vq4",
+          "mode": "list",
+          "cachedResultName": "Clinical",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10j5yJzPCvuFMFcFZnTQvewfbG1OkhLICaCpAbDU3vq4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1613423992,
+          "mode": "list",
+          "cachedResultName": "Registration",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10j5yJzPCvuFMFcFZnTQvewfbG1OkhLICaCpAbDU3vq4/edit#gid=1613423992"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name ": "={{ $json.patient_name }}",
+            "Phone Number": "={{ $json.phone_number }}",
+            "Medical specialty": "={{ $json.specialty }}",
+            "Data": "={{ $json.date }}",
+            "TIme": "={{ $json.time }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name ",
+              "displayName": "Name ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Medical specialty",
+              "displayName": "Medical specialty",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Data",
+              "displayName": "Data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TIme",
+              "displayName": "TIme",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        240,
+        -720
+      ],
+      "id": "b9f4d022-63e1-4b44-855a-1fe18e98cb03",
+      "name": "Registration",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lHvkwg4glYePcvfd",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7e68b098-d0cc-4ee0-8076-0232c046fcde",
+              "name": "data",
+              "value": "[]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        464,
+        -144
+      ],
+      "id": "34aee769-6bc5-4731-91fd-be7a0c3fc7e8",
+      "name": "No Data"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "flow.autom8n.me",
+            "user-agent": "python-requests/2.34.2",
+            "content-length": "103",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "156.209.53.54",
+            "cf-ipcountry": "EG",
+            "cf-ray": "a1bc5b479b1e5837-MXP",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-warp-tag-id": "3845fbe8-da37-406d-ae2a-a5beece52545",
+            "connection": "keep-alive",
+            "content-type": "application/json",
+            "x-forwarded-for": "156.209.53.54",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "action": "search_faq",
+            "keywords": [
+              "ساعات العمل"
+            ]
+          },
+          "webhookUrl": "https://flow.autom8n.me/webhook/clinical",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Date",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Doctor ?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "FAQ Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Date": {
+      "main": [
+        [
+          {
+            "node": "Registration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doctor ?": {
+      "main": [
+        [
+          {
+            "node": "Doctors Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FAQ Data": {
+      "main": [
+        [
+          {
+            "node": "Only Related",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only Related": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doctors Data": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registration": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Data": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "00e74bbd-1a94-4961-beca-de0d8c15bc08",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b4d2c13300eb82b5a5d689ac832570366cf2cdd621ed6615b0d1b5bcaa77893b"
+  },
+  "nodeGroups": [],
+  "id": "xIUTMmStPqJZmwc4",
+  "tags": []
+}
