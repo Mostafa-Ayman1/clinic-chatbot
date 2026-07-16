@@ -1,0 +1,8 @@
+# UI
+gradio
+
+#AI
+openai
+
+## 
+dotenv
