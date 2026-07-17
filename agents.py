@@ -20,7 +20,7 @@ ALLOWED_KEYWORDS_LIST = [
 ALLOWED_KEYWORDS = "، ".join(ALLOWED_KEYWORDS_LIST)
 
 # ---------------------------------------------------------
-# 2. Tools for FAQ and Booking Agents
+#  Tools for FAQ and Booking Agents
 # ---------------------------------------------------------
 
 faq_tools = [
@@ -119,7 +119,6 @@ def handle_faq(user_message):
             print(f"🚨 n8n Webhook Error: {e}")
             n8n_data = "تعذر الاتصال بقاعدة البيانات حالياً."
         except ValueError as e:
-            # خطأ في تحويل الرد إلى JSON
             print(f"🚨 n8n Response Parsing Error: {e}")
             n8n_data = "تعذر قراءة رد قاعدة البيانات حالياً."
 
