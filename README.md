@@ -98,7 +98,7 @@ The workflow is responsible for:
 Clone the repository
 
 ```bash
-git clone [<repository-url>](https://github.com/Mostafa-Ayman1/clinic-chatbot.git)
+git clone https://github.com/Mostafa-Ayman1/clinic-chatbot.git
 cd clinic-chatbot
 ```
 
