@@ -8,9 +8,9 @@ client = openai.OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_API_BASE)
 
 def router(user_message, history):
     try:
-        # ==========================================
-        # Context-Aware Router (الراوتر الذكي اللي بيشوف السياق)
-        # ==========================================
+        # ========================
+        # Context-Aware Router
+        # ========================
         router_messages = [{"role": "system", "content": ROUTER_PROMPT}]
 
  
@@ -84,14 +84,14 @@ chatbot = gr.ChatInterface(
         )
     ),
 
-    # تظبيط مربع الكتابة
+    
     textbox=gr.Textbox(
         placeholder="اكتب استفسارك هنا (مثال: بكام الكشف؟) ...",
         container=False,
         scale=7
     ),
 
-    # أمثلة جاهزة
+
     examples=[
         "العنوان بتاعكم فين؟",
         "بكام الكشف؟ ومواعيدكم إمتى؟",
